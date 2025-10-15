@@ -93,6 +93,13 @@ Input: "The Bush administration blamed trial lawyers..."
 ---
 
 ```
+### 1. Clone the Folder
+
+```bash
+git clone https://github.com/qing10101/el4ner_scu
+cd el4ner_scu
+```
+
 ### 2. Set Up a Virtual Environment
 
 It is highly recommended to use a virtual environment to manage dependencies.
