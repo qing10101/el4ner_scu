@@ -1,4 +1,3 @@
-#### 4. `prepare_data.py` (Utility to download and format the data)
 import json
 from datasets import load_dataset
 import os
