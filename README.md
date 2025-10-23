@@ -22,8 +22,6 @@ This project not only replicates the core EL4NER pipeline but also includes a ri
 
 The entire process is designed to intelligently guide a committee of small language models to perform a specialized NER task at inference time.
 
-## ⚙️ How It Works: The EL4NER Pipeline
-
 ```markdown
 
 The entire process is designed to intelligently guide general-purpose sLLMs to perform a specialized NER task at inference time.
