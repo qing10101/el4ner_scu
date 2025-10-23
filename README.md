@@ -1,22 +1,26 @@
-### `README.md`
-
-# EL4NER: A Lightweight, Training-Free NER Pipeline
+# EL4NER: A Quantitative Implementation of Training-Free NER
 
 ![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 ![Paper](https://img.shields.io/badge/arXiv-2505.23038-b31b1b.svg)
 
-This repository provides a faithful implementation of the research paper **"EL4NER: Ensemble Learning for Named Entity Recognition via Multiple Small-Parameter Large Language Models"**. It showcases a novel, training-free approach to NER that leverages the collective intelligence of multiple open-source small LLMs (sLLMs) to achieve state-of-the-art performance with high parameter efficiency.
+This repository provides a faithful, step-by-step implementation and quantitative evaluation of the research paper **"EL4NER: Ensemble Learning for Named Entity Recognition via Multiple Small-Parameter Large Language Models"**.
+
+This project not only replicates the core EL4NER pipeline but also includes a rigorous, fair comparison against a state-of-the-art standalone LLM (Llama 3.3 70B), all designed to run on high-VRAM GPUs like the NVIDIA RTX A6000.
 
 ## ✨ Key Features
 
 - **🧠 Ensemble Learning**: Aggregates outputs from multiple sLLMs (Phi-3, GLM-4, Qwen2) to enhance accuracy and robustness.
 - **🚀 Training-Free**: Relies entirely on **In-Context Learning (ICL)**, eliminating the need for expensive and time-consuming fine-tuning.
-- **🎯 Advanced Retrieval**: Implements a novel span-level sentence similarity algorithm to find the most relevant examples for ICL prompts.
-- **🔍 Task Decomposition**: Breaks down the complex NER task into a four-stage pipeline: Demonstration Retrieval, Span Extraction, Span Classification, and Type Verification.
-- ** modular and Customizable**: Easily configure the number of demonstrations, the verifier model, and the input data.
+- **🔬 Fair & Quantitative Evaluation**: Includes a script to calculate Precision, Recall, and F1-score against the WNUT17 test set, ensuring all models have access to the same ICL examples.
+- **🖥️ VRAM-Efficient Scripts**: Intelligently loads and unloads models sequentially, allowing complex comparisons with multiple large models to run on a single 48GB GPU.
+- **📦 Professional Structure**: Code is organized into a clean, scalable Python package.
 
 ---
+
+## ⚙️ How It Works: The EL4NER Pipeline
+
+The entire process is designed to intelligently guide a committee of small language models to perform a specialized NER task at inference time.
 
 ## ⚙️ How It Works: The EL4NER Pipeline
 
@@ -93,14 +97,27 @@ Input: "The Bush administration blamed trial lawyers..."
 ---
 
 ```
-### 1. Clone the Folder
+## 🚀 Getting Started: A Step-by-Step Guide
+
+Follow these steps in order to set up and run the project.
+
+### Step 0: Prerequisites
+
+- **Hardware:** A high-end NVIDIA GPU with **at least 48 GB of VRAM** (e.g., RTX A6000, A100) is **required** to run the full evaluation with Llama 3.3 70B.
+- **Software:** Python 3.9+ and Git.
+- **Access:** A [Hugging Face](https://huggingface.co/) account with granted access to the [Llama 3.3 70B model](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct).
+- **Permissions:** **No root or `sudo` access is required** for any part of this process. The entire project runs in a standard user environment.
+
+### Step 1: Clone the Repository
+
+Clone this repository to your local machine or lab server.
 
 ```bash
 git clone https://github.com/qing10101/el4ner_scu
 cd el4ner_scu
 ```
 
-### 2. Set Up a Virtual Environment
+### Step 2: Create and Activate a Virtual Environment
 
 It is highly recommended to use a virtual environment to manage dependencies.
 
@@ -109,7 +126,7 @@ python -m venv venv
 source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
 ```
 
-### 3. Install Dependencies
+### Step 3: Install Dependencies
 
 Install all the required Python packages from the `requirements.txt` file.
 
@@ -117,7 +134,19 @@ Install all the required Python packages from the `requirements.txt` file.
 pip install -r requirements.txt
 ```
 
-### 4. Prepare the Dataset
+
+## Step 4: Authenticate with Hugging Face
+
+This step securely logs you into Hugging Face, allowing the scripts to download the gated Llama 3.3 model.
+Create a Hugging Face access token with read permissions on their website.
+Run the following command in your terminal and paste your token when prompted.
+
+```bash
+hf auth login
+```
+
+
+### Step 5: Prepare the Dataset
 
 This implementation is pre-configured to use the **WNUT17** dataset from Hugging Face. Run the provided script to automatically download, process, and format the data into a source pool file required by the pipeline.
 
@@ -131,35 +160,38 @@ python prepare_data.py
 
 ## 💻 Usage
 
-You can run the full NER pipeline on any text using the `main.py` script.
+All commands should be run from the project's root directory (el4ner_scu/).
 
-### Quick Start
+### Option 1: Quantitative Evaluation (Recommended Final Goal)
 
-Here's how to run the pipeline on the example text from the paper:
+This is the main script. It runs a fair, data-driven comparison and calculates Precision, Recall, and F1-scores.
+**How to Run:**
 
-Go to the el4ner-implementation folder.
 ```bash
-python -m el4ner.main --text "The Bush administration blamed trial lawyers for undermining their authority in the country."
+# Run a quick test on 10 samples to ensure everything is working
+python fair_evaluation.py --num_samples 10 --output_file fair_test_run.json
+
+# Run a full evaluation on a larger sample (e.g., 50). This will take several hours.
+python fair_evaluation.py --num_samples 50 --output_file fair_evaluation_results.json```
+The results will be printed to the console and a detailed JSON file will be saved.
 ```
 
-### Command-Line Arguments
+### Option 2: Qualitative Side-by-Side Comparison
 
-Customize the pipeline's behavior with these arguments:
-
-| Argument | Description | Default |
-| :--- | :--- | :--- |
-| `--text` | **(Required)** The input text string to perform NER on. | `None` |
-| `--data_path`| Path to the JSON source pool file for demonstration retrieval. | `data/wnut17_source_pool.json` |
-| `--k` | The number of demonstrations to retrieve from the source pool. | `5` |
-| `--verifier` | The backbone model to use for the final verification step. | `glm` |
-
-**Example with custom arguments:**
+This script is useful for quick demos on a few specific sentences, printing a clean comparison table.
+**How to Run:**
 
 ```bash
-python -m el4ner.main \
-  --text "Apple is set to announce the new iPhone in California next week." \
-  --k 10 \
-  --verifier phi
+python compare_ner_methods.py
+```
+
+### Option 3: Running the Core EL4NER Pipeline
+
+If you only want to test the EL4NER pipeline itself without the long overhead of loading Llama 3.3, use this command.
+**How to Run:**
+
+```bash
+python -m el4ner.main --text "Apple is set to announce the new iPhone in California next week."
 ```
 
 ---
@@ -167,19 +199,21 @@ python -m el4ner.main \
 ## 📂 Project Structure
 
 ```
-el4ner_scu/          <-- This is your main project folder and Git repository root
-├── .git/
+el4ner_scu/
+├── data/                    # Stores the prepared dataset (created by script)
+├── el4ner/                  # The core Python source package
+│   ├── __init__.py
+│   ├── main.py              # Entry point for the core EL4NER tool
+│   ├── models.py
+│   ├── pipeline.py
+│   └── prompts.py
 ├── .gitignore
 ├── LICENSE
 ├── README.md
-├── requirements.txt
-├── prepare_data.py      <-- A utility script can live at the root
-└── el4ner/              <-- This is your source code package
-    ├── __init__.py      <-- Makes this a Python package (can be empty)
-    ├── main.py
-    ├── models.py
-    ├── pipeline.py
-    └── prompts.py
+├── compare_ner_methods.py   # Script for qualitative demos
+├── fair_evaluation.py       # Script for quantitative F1-score evaluation
+├── prepare_data.py          # Script to download and format data
+└── requirements.txt
 ```
 
 ---

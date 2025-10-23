@@ -1,7 +1,9 @@
+# el4ner/main.py (Corrected Version)
+
 import argparse
 import json
-from models import load_all_models
-from pipeline import run_el4ner_pipeline
+from el4ner.models import load_el4ner_models # Corrected import
+from el4ner.pipeline import run_el4ner_pipeline
 
 def main():
     parser = argparse.ArgumentParser(description="Run the EL4NER pipeline on an input text.")
@@ -12,7 +14,7 @@ def main():
     args = parser.parse_args()
 
     # Load models
-    backbone_models, similarity_model = load_all_models()
+    backbone_models, similarity_model = load_el4ner_models() # Corrected function call
 
     # Load source pool data
     print(f"Loading source pool from {args.data_path}...")
@@ -36,24 +38,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-# ---
-#
-# ### Part 2: Which Dataset to Use and How
-#
-# For this implementation, I recommend using the **WNUT17** dataset.
-#
-# **Why WNUT17?**
-# 1.  **Accessibility:** It is publicly and easily available on the Hugging Face Hub. Unlike ACE2005, it doesn't require a license.
-# 2.  **Simplicity:** The data format is well-structured and straightforward to parse.
-# 3.  **Relevance:** It was one of the key datasets used for evaluation in the original EL4NER paper, so it's a fitting choice.
-#
-# #### How the Dataset is Used for Extraction and Classification
-#
-# You use the **same source pool** for both stages. The difference is in *what information you format* for the demonstration prompts.
-#
-# *   The `prepare_data.py` script creates a single file: `data/wnut17_source_pool.json`. This is your entire reference library.
-# *   **For the Span Extraction stage**, the `format_extraction_demos` function in `prompts.py` takes an entry from this file and only uses the `text` and the *keys* of the `entities` dictionary (the spans themselves).
-# *   **For the Span Classification stage**, the `format_classification_demos` function uses the `text` and the full `entities` dictionary (both the spans and their types).
-#
-# This approach is efficient because you only need to load and process one dataset, which then serves as the foundation for all the in-context learning steps.

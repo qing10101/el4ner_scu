@@ -1,16 +1,18 @@
+# el4ner/models.py
+# This is the simplified, final version for the core EL4NER pipeline.
+
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from sentence_transformers import SentenceTransformer
 
-def load_all_models():
+def load_el4ner_models():
     """
-    Loads and configures all the necessary models for the EL4NER pipeline.
-    - Backbone sLLMs with 4-bit quantization.
-    - Sentence Transformer for semantic similarity.
+    Loads ONLY the models required for the core EL4NER pipeline:
+    - The three backbone sLLMs (Phi-3, GLM-4, Qwen2).
+    - The Sentence Transformer for semantic similarity.
     """
-    print("Loading all models. This might take a while...")
+    print("Loading models for the EL4NER pipeline...")
 
-    # Use 4-bit quantization to save memory
     quantization_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_quant_type="nf4",
@@ -49,5 +51,5 @@ def load_all_models():
     print("Loading similarity model...")
     similarity_model = SentenceTransformer('all-MiniLM-L6-v2', device='cuda')
 
-    print("All models loaded successfully!")
+    print("EL4NER models loaded successfully!")
     return backbone_models, similarity_model
