@@ -173,8 +173,8 @@ python fair_evaluation.py --num_samples 10 --output_file fair_test_run.json
 
 # Run a full evaluation on a larger sample (e.g., 50). This will take several hours.
 python fair_evaluation.py --num_samples 50 --output_file fair_evaluation_results.json```
-The results will be printed to the console and a detailed JSON file will be saved.
 ```
+The results will be printed to the console and a detailed JSON file will be saved.
 
 ### Option 2: Qualitative Side-by-Side Comparison
 
