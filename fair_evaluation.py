@@ -9,7 +9,7 @@ from datasets import load_dataset
 from seqeval.metrics import classification_report
 from seqeval.scheme import IOB2
 from sentence_transformers import SentenceTransformer, util
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 
 # --- Import and reuse components from our existing scripts ---
 from el4ner.pipeline import run_el4ner_pipeline
@@ -155,7 +155,7 @@ def main(args):
                                        "Single Small LLM (Phi-3)": []}
     detailed_results = []
 
-    quantization_config = torch.nn.Identity()  # Placeholder if not using quantization. Replace with BitsAndBytesConfig if needed.
+    quantization_config = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4",bnb_4bit_compute_dtype=torch.bfloat16)
 
     # Load the source pool once for all models
     with open('data/wnut17_source_pool.json', 'r') as f:
