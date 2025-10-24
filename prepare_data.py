@@ -8,9 +8,9 @@ def create_source_pool_from_wnut17():
     into the JSON format required for the EL4NER source pool.
     """
     print("Loading WNUT17 dataset from Hugging Face...")
-    # Load the dataset
-    dataset = load_dataset("wnut_17")
-    train_data = dataset['train']
+
+    # Load the train split directly to bypass the old dataset script
+    train_data = load_dataset("wnut_17", split="train")
 
     # NER tags mapping from IDs to labels
     ner_tags = train_data.features['ner_tags'].feature.names
