@@ -4,7 +4,7 @@ import nltk
 from sentence_transformers import util
 from tqdm import tqdm
 from collections import Counter
-from prompts import (
+from el4ner.prompts import (
     ZERO_SHOT_EXTRACTION_TEMPLATE, FEW_SHOT_EXTRACTION_TEMPLATE,
     FEW_SHOT_CLASSIFICATION_TEMPLATE, VERIFICATION_TEMPLATE,
     format_extraction_demos, format_classification_demos
