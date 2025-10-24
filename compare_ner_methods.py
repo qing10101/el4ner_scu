@@ -16,7 +16,7 @@ from el4ner.pipeline import run_el4ner_pipeline
 SINGLE_LLM_FEW_SHOT_PROMPT = """You are an expert at Named Entity Recognition. Your task is to extract entities from the given text.
 The valid entity types are: person, location, organization, product, creative-work, corporation.
 Respond ONLY with a valid JSON object where keys are the extracted entities and values are their types.
-The allowed Named Entity categories are Person, Location, Group, Creative work, Corporation, Product
+The allowed Named Entity categories are Person, Location, Group, Creative work, Corporation, Product.
 
 --- EXAMPLES ---
 Text: "The new MacBook Pro was unveiled by Tim Cook in Cupertino."

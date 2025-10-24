@@ -114,7 +114,7 @@ def run_retrieval_augmented_llm_ner(text, demos, model, tokenizer):
     prompt = f"""You are an expert at Named Entity Recognition. Your task is to extract entities from the given text.
 The valid entity types are: person, location, organization, product, creative-work, corporation, group.
 Respond ONLY with a valid JSON object where keys are the extracted entities and values are their types.
-The allowed Named Entity categories are Person, Location, Group, Creative work, Corporation, Product
+The allowed Named Entity categories are Person, Location, Group, Creative work, Corporation, Product.
 
 --- EXAMPLES ---
 {demo_prompt}--- END EXAMPLES ---
