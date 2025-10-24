@@ -1,5 +1,5 @@
 transformers
-datasets
+datasets~=3.6.0
 torch
 accelerate
 bitsandbytes
