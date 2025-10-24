@@ -158,7 +158,7 @@ def main(args):
     quantization_config = torch.nn.Identity()  # Placeholder if not using quantization. Replace with BitsAndBytesConfig if needed.
 
     # Load the source pool once for all models
-    with open('data/wnut_17_train.json', 'r') as f:
+    with open('data/wnut17_source_pool.json', 'r') as f:
         source_pool = json.load(f)
 
     # Load the similarity model once for all models
