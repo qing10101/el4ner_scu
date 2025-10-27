@@ -19,22 +19,32 @@ from .prompts import (
 def _run_llm_inference(prompt, model, tokenizer, is_glm_model: bool, max_new_tokens=100):
     """
     A helper function to run inference on a given model.
-    It now accepts an explicit boolean to handle the GLM-4 special case.
+    This version explicitly constructs the arguments for model.generate to
+    guarantee that the attention_mask is handled correctly for all cases.
     """
     inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
 
-    if is_glm_model:
-        # For GLM-4, we must NOT pass the attention_mask to avoid a bug in its custom code.
-        inference_inputs = {"input_ids": inputs["input_ids"]}
-    else:
-        # For all other standard models, we pass the full inputs dictionary.
-        inference_inputs = inputs
+    # --- THE DEFINITIVE FIX ---
+    # We will manually build the dictionary of arguments to pass to the generate function.
+    # This is the most explicit and reliable method.
 
-    outputs = model.generate(
-        **inference_inputs,
-        max_new_tokens=max_new_tokens,
-        pad_token_id=tokenizer.pad_token_id
-    )
+    generation_kwargs = {
+        "input_ids": inputs["input_ids"],
+        "max_new_tokens": max_new_tokens,
+        "pad_token_id": tokenizer.pad_token_id
+    }
+
+    if not is_glm_model:
+        # If it is NOT a GLM model, we explicitly add the attention_mask.
+        # This is required for standard models like Phi-3 and Qwen2.
+        generation_kwargs["attention_mask"] = inputs["attention_mask"]
+
+    # For the GLM model, the 'attention_mask' key is never added to the dictionary,
+    # which prevents the bug in its custom code.
+
+    # We use ** to unpack the dictionary into keyword arguments.
+    outputs = model.generate(**generation_kwargs)
+
     response = tokenizer.decode(outputs[0], skip_special_tokens=True)
     return response
 
