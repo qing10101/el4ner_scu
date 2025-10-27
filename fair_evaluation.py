@@ -208,15 +208,15 @@ def main(args):
         baseline_demos = retrieve_simple_demos(text, source_pool, similarity_model, k=5)
 
         # --- Run Llama 3.3 70B ---
-        # llama_id = "meta-llama/Llama-3.3-70B-Instruct"
-        # llama_tokenizer = AutoTokenizer.from_pretrained(llama_id)
-        # llama_model = AutoModelForCausalLM.from_pretrained(llama_id, device_map="auto",
-        #                                                    quantization_config=quantization_config)
-        # llama_preds = run_retrieval_augmented_llm_ner(text, baseline_demos, llama_model, llama_tokenizer)
-        # _, llama_tags = convert_to_iob2(text, llama_preds)
-        # all_preds_iob["Powerful LLM (Llama-3.3-70B)"].append(llama_tags)
-        # sample_result["llama_prediction"] = llama_preds
-        # clear_memory(llama_model, llama_tokenizer)
+        llama_id = "meta-llama/Llama-3.3-70B-Instruct"
+        llama_tokenizer = AutoTokenizer.from_pretrained(llama_id)
+        llama_model = AutoModelForCausalLM.from_pretrained(llama_id, device_map="auto",
+                                                           quantization_config=quantization_config)
+        llama_preds = run_retrieval_augmented_llm_ner(text, baseline_demos, llama_model, llama_tokenizer)
+        _, llama_tags = convert_to_iob2(text, llama_preds)
+        all_preds_iob["Powerful LLM (Llama-3.3-70B)"].append(llama_tags)
+        sample_result["llama_prediction"] = llama_preds
+        clear_memory(llama_model, llama_tokenizer)
 
         # --- Run Phi-3 ---
         phi_id = "microsoft/Phi-3-mini-4k-instruct"
