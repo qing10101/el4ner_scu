@@ -11,7 +11,6 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 
 # A set of model IDs that are known to require custom remote code.
 MODELS_REQUIRING_REMOTE_CODE = {
-    "THUDM/glm-4-9b-chat",
     "Qwen/Qwen3-30B-A3B-Instruct-2507" # <-- Add this line
 }
 

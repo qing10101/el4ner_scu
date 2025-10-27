@@ -10,7 +10,7 @@ This project not only replicates the core EL4NER pipeline but also includes a ri
 
 ## ✨ Key Features
 
-- **🧠 Ensemble Learning**: Aggregates outputs from multiple sLLMs (Phi-3, GLM-4, Qwen2) to enhance accuracy and robustness.
+- **🧠 Ensemble Learning**: Aggregates outputs from multiple sLLMs (Phi-3, Mistral, Qwen2) to enhance accuracy and robustness.
 - **🚀 Training-Free**: Relies entirely on **In-Context Learning (ICL)**, eliminating the need for expensive and time-consuming fine-tuning.
 - **🔬 Fair & Quantitative Evaluation**: Includes a script to calculate Precision, Recall, and F1-score against the WNUT17 test set, ensuring all models have access to the same ICL examples.
 - **🖥️ VRAM-Efficient Scripts**: Intelligently loads and unloads models sequentially, allowing complex comparisons with multiple large models to run on a single 48GB GPU.
@@ -50,7 +50,7 @@ Input: "The Bush administration blamed trial lawyers..."
 |                                                                          |
 |   Receives: `Input Text` & `Demonstrations`                                |
 |                                                                          |
-|   🧠 Process: Each sLLM (Phi-3, GLM-4, Qwen2) is prompted with the         |
+|   🧠 Process: Each sLLM (Phi-3, Mistral, Qwen2) is prompted with the         |
 |   demonstrations and asked to identify all possible named entities in    |
 |   the text. This leverages the unique strengths of each model.            |
 |                                                                          |

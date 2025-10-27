@@ -1,15 +1,15 @@
-# el4ner/models.py (Refactored with selective trust_remote_code)
+# el4ner/models.py (Final, Stable Version)
 
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from sentence_transformers import SentenceTransformer
-from utils import MODELS_REQUIRING_REMOTE_CODE, configure_model_and_tokenizer
+# We can now import this directly from utils again for consistency
+from utils import configure_model_and_tokenizer
 
 
 def load_el4ner_models():
     """
-    Loads ONLY the models required for the core EL4NER pipeline,
-    applying trust_remote_code selectively.
+    Loads the models for the core EL4NER pipeline using standard, non-gated models.
     """
     print("Loading models for the EL4NER pipeline...")
 
@@ -22,22 +22,19 @@ def load_el4ner_models():
     backbone_models = {}
     model_ids = {
         "phi": "microsoft/Phi-3-mini-4k-instruct",
-        "glm": "THUDM/glm-4-9b-chat",
+        "mistral": "mistralai/Mistral-7B-Instruct-v0.2",  # <-- REPLACED GLM/Llama3
         "qwen": "Qwen/Qwen2-7B-Instruct"
     }
 
     for name, model_id in model_ids.items():
         print(f"Loading {name}...")
-        should_trust = model_id in MODELS_REQUIRING_REMOTE_CODE
-
-        tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=should_trust)
+        # All models are now standard and do not need trust_remote_code=True
+        tokenizer = AutoTokenizer.from_pretrained(model_id)
         model = AutoModelForCausalLM.from_pretrained(
             model_id,
             device_map="auto",
-            quantization_config=quantization_config,
-            trust_remote_code=should_trust
+            quantization_config=quantization_config
         )
-
         model, tokenizer = configure_model_and_tokenizer(model, tokenizer)
         backbone_models[name] = (model, tokenizer)
 

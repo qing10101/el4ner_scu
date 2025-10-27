@@ -126,10 +126,10 @@ def main(args):
 
         # --- Run EL4NER ---
         backbone_models = {}
-        for name, model_id in {"phi": "microsoft/Phi-3-mini-4k-instruct", "glm": "THUDM/glm-4-9b-chat",
+        for name, model_id in {"phi": "microsoft/Phi-3-mini-4k-instruct", "mistral": "mistralai/Mistral-7B-Instruct-v0.2",
                                "qwen": "Qwen/Qwen2-7B-Instruct"}.items():
             backbone_models[name] = load_model(model_id, quantization_config)
-        el4ner_preds = run_el4ner_pipeline(text, source_pool, backbone_models, similarity_model, k=5, verifier='glm')
+        el4ner_preds = run_el4ner_pipeline(text, source_pool, backbone_models, similarity_model, k=5, verifier="mistral")
         _, el4ner_tags = convert_to_iob2(text, el4ner_preds)
         all_preds_iob["EL4NER (Ensemble)"].append(el4ner_tags)
         sample_result["el4ner_prediction"] = el4ner_preds

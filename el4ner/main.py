@@ -23,7 +23,9 @@ def main():
     parser.add_argument("--text", type=str, required=True, help="The input text to perform NER on.")
     parser.add_argument("--data_path", type=str, default="data/wnut17_source_pool.json", help="Path to the source pool JSON file.")
     parser.add_argument("--k", type=int, default=5, help="Number of demonstrations to retrieve.")
-    parser.add_argument("--verifier", type=str, default="glm", choices=["phi", "glm", "qwen"], help="Model to use for the verification step.")
+    # Change the choices and the default verifier
+    parser.add_argument("--verifier", type=str, default="mistral", choices=["phi", "mistral", "qwen"],
+                        help="Model to use for the verification step.")
     args = parser.parse_args()
 
     # Perform one-time setup for NLTK
