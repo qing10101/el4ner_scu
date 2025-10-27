@@ -2,6 +2,8 @@
 
 import json
 import textwrap
+
+import torch
 from transformers import BitsAndBytesConfig
 from sentence_transformers import SentenceTransformer
 
