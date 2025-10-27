@@ -18,17 +18,22 @@ from .prompts import (
 def _run_llm_inference(prompt, model, tokenizer, max_new_tokens=100):
     """
     A helper function to run inference on a given model.
-    This version is robust and handles the special case for GLM-4 models.
+    This version is robust and handles the special case for GLM-4 models
+    by checking the model's class name directly.
     """
     inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
 
-    # --- THE CRITICAL FIX ---
-    # Check if the model is GLM-4. Its model type is 'chatglm'.
-    if model.config.model_type == 'chatglm':
+    # --- THE CRITICAL FIX (V2) ---
+    # We check the model's class name, which is more reliable than the config.
+    is_glm_model = "ChatGLM" in model.__class__.__name__
+
+    if is_glm_model:
         # For GLM-4, we must NOT pass the attention_mask to avoid a bug in its custom code.
+        # This prevents the AttributeError: 'NoneType' object has no attribute 'shape'
         inference_inputs = {"input_ids": inputs["input_ids"]}
     else:
-        # For all other standard models (Phi-3, Qwen2, Llama), we pass everything.
+        # For all other standard models (Phi-3, Qwen2, Llama), we pass the full
+        # inputs dictionary, including the attention_mask they need.
         inference_inputs = inputs
 
     outputs = model.generate(
