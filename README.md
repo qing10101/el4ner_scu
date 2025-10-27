@@ -202,7 +202,8 @@ el4ner_scu/
 ├── compare_ner_methods.py   # Script for qualitative demos
 ├── fair_evaluation.py       # Script for quantitative F1-score evaluation
 ├── prepare_data.py          # Script to download and format data
-└── requirements.txt
+├── requirements.txt
+└── utils.py                 # Central toolbox for shared functions
 ```
 
 ---
