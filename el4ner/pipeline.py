@@ -18,18 +18,24 @@ from .prompts import (
 def _run_llm_inference(prompt, model, tokenizer, max_new_tokens=100):
     """
     A helper function to run inference on a given model.
-    Assumes the model and tokenizer have been correctly configured beforehand.
+    This version is robust and handles the special case for GLM-4 models.
     """
-    # Tokenize the prompt to get both input_ids and attention_mask
     inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
 
-    # CRITICAL FIX: Create a new dictionary containing ONLY the input_ids.
-    # This allows the GLM-4 model's custom code to generate its own attention mask,
-    # which avoids the bug with past_key_values.
-    inference_inputs = {"input_ids": inputs["input_ids"]}
+    # --- THE CRITICAL FIX ---
+    # Check if the model is GLM-4. Its model type is 'chatglm'.
+    if model.config.model_type == 'chatglm':
+        # For GLM-4, we must NOT pass the attention_mask to avoid a bug in its custom code.
+        inference_inputs = {"input_ids": inputs["input_ids"]}
+    else:
+        # For all other standard models (Phi-3, Qwen2, Llama), we pass everything.
+        inference_inputs = inputs
 
-    # Pass the filtered inputs to the generate function
-    outputs = model.generate(**inference_inputs, max_new_tokens=max_new_tokens, pad_token_id=tokenizer.pad_token_id)
+    outputs = model.generate(
+        **inference_inputs,
+        max_new_tokens=max_new_tokens,
+        pad_token_id=tokenizer.pad_token_id
+    )
     response = tokenizer.decode(outputs[0], skip_special_tokens=True)
     return response
 
