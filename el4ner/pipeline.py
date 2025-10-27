@@ -146,7 +146,7 @@ def classify_spans(text, spans_to_classify, demos, model, tokenizer, is_glm_mode
         demonstrations=demo_prompt, text=text, spans_to_classify=spans_str
     )
     # --- PASS THE FLAG DOWN ---
-    response = _run_llm_inference(prompt, model, tokenizer, is_glm_model=is_glm, max_new_tokens=250)
+    response = _run_llm_inference(prompt, model, tokenizer, is_glm_model=is_glm_model, max_new_tokens=250)
 
     try:
         classification_part = response.split("Classification:")[1].strip()
