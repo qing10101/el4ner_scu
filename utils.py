@@ -40,15 +40,16 @@ def load_model(model_id, quantization_config):
 
 
 def clear_memory(*args):
-    """Clears models and CUDA cache from memory."""
-    for model in args:
-        if isinstance(model, dict):
-            for m_tuple in model.values():
-                del m_tuple[0]  # model
-                del m_tuple[1]  # tokenizer
-        else:
-            del model
+    """
+    Clears provided objects from memory and empties the CUDA cache.
+    This version correctly handles all data types, including dictionaries.
+    """
+    for arg in args:
+        del arg  # Delete the reference to the object passed to the function
+
+    # Explicitly call the garbage collector to free up the memory
     gc.collect()
+    # Empty the CUDA cache to free up GPU VRAM
     torch.cuda.empty_cache()
 
 
