@@ -13,16 +13,30 @@ from el4ner.prompts import (
 # Initialize NLTK
 nltk.download('punkt', quiet=True)
 nltk.download('averaged_perceptron_tagger', quiet=True)
+nltk.download('averaged_perceptron_tagger_eng', quiet=True)
+nltk.download('punkt_tab', quiet=True)
 
 
-def _run_llm_inference(prompt, model, tokenizer, max_new_tokens=100):
+def _run_llm_inference(prompt, model, tokenizer, max_new_tokens=100, model_name=""):
     """A helper function to run inference on a given model."""
-    inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
+    device = next(model.parameters()).device  # model device
+    inputs = tokenizer(prompt, return_tensors="pt").to(device)
+
     if tokenizer.pad_token_id is None:
         tokenizer.pad_token_id = tokenizer.eos_token_id
-    outputs = model.generate(**inputs, max_new_tokens=max_new_tokens, pad_token_id=tokenizer.pad_token_id)
+
+    use_cache_flag = False if "glm" in model_name.lower() else True
+
+    outputs = model.generate(
+        **inputs,
+        max_new_tokens=max_new_tokens,
+        pad_token_id=tokenizer.pad_token_id,
+        use_cache=use_cache_flag
+    )
+
     response = tokenizer.decode(outputs[0], skip_special_tokens=True)
     return response
+
 
 
 def _extract_spans_from_response(response, anchor_text="Entities:"):
@@ -37,10 +51,11 @@ def _extract_spans_from_response(response, anchor_text="Entities:"):
 
 # --- Stage 1 Functions ---
 
-def extract_spans_zero_shot(text, model, tokenizer):
+def extract_spans_zero_shot(text, model, tokenizer, model_name=""):
     prompt = ZERO_SHOT_EXTRACTION_TEMPLATE.format(text=text)
-    response = _run_llm_inference(prompt, model, tokenizer)
+    response = _run_llm_inference(prompt, model, tokenizer, model_name=model_name)
     return _extract_spans_from_response(response)
+
 
 
 def get_pos_weight(span):
@@ -80,8 +95,8 @@ def calculate_span_similarity(input_spans, candidate_spans, similarity_model):
 def retrieve_demonstrations(text, source_pool, models, similarity_model, k):
     print("Stage 1: Retrieving Demonstrations...")
     input_pre_extracted_spans = set()
-    for model, tokenizer in models.values():
-        spans = extract_spans_zero_shot(text, model, tokenizer)
+    for name, (model, tokenizer) in models.items():
+        spans = extract_spans_zero_shot(text, model, tokenizer, model_name=name)
         input_pre_extracted_spans.update(spans)
 
     input_spans_list = list(input_pre_extracted_spans)
@@ -105,7 +120,7 @@ def extract_spans_few_shot(text, demos, models):
     demo_prompt = format_extraction_demos(demos)
     for name, (model, tokenizer) in models.items():
         prompt = FEW_SHOT_EXTRACTION_TEMPLATE.format(demonstrations=demo_prompt, text=text)
-        response = _run_llm_inference(prompt, model, tokenizer, max_new_tokens=150)
+        response = _run_llm_inference(prompt, model, tokenizer, max_new_tokens=150, model_name=name)
         spans = _extract_spans_from_response(response)
         print(f"  {name} extracted: {spans}")
         final_extracted_spans.update(spans)
@@ -114,13 +129,13 @@ def extract_spans_few_shot(text, demos, models):
 
 # --- Stage 3 Functions ---
 
-def classify_spans(text, spans_to_classify, demos, model, tokenizer):
+def classify_spans(text, spans_to_classify, demos, model, tokenizer,  model_name=""):
     demo_prompt = format_classification_demos(demos)
     spans_str = "[SEP]".join(spans_to_classify)
     prompt = FEW_SHOT_CLASSIFICATION_TEMPLATE.format(
         demonstrations=demo_prompt, text=text, spans_to_classify=spans_str
     )
-    response = _run_llm_inference(prompt, model, tokenizer, max_new_tokens=250)
+    response = _run_llm_inference(prompt, model, tokenizer, max_new_tokens=250, model_name=model_name)
 
     try:
         classification_part = response.split("Classification:")[1].strip()
@@ -139,7 +154,7 @@ def ensemble_classification_and_vote(text, spans, demos, models):
     print("Stage 3: Classifying Spans and Voting...")
     all_classifications = []
     for name, (model, tokenizer) in models.items():
-        classifications = classify_spans(text, spans, demos, model, tokenizer)
+        classifications = classify_spans(text, spans, demos, model, tokenizer, model_name=name)
         print(f"  {name} classified: {classifications}")
         all_classifications.append(classifications)
 
@@ -160,7 +175,7 @@ def verify_and_filter(text, classified_entities, models, verifier_name):
     final_verified_results = {}
     for span, entity_type in classified_entities.items():
         prompt = VERIFICATION_TEMPLATE.format(text=text, span=span, entity_type=entity_type)
-        response = _run_llm_inference(prompt, verifier_model, verifier_tokenizer, max_new_tokens=5)
+        response = _run_llm_inference(prompt, verifier_model, verifier_tokenizer, max_new_tokens=5, model_name=verifier_name)
         answer = response.split("Answer:")[1].strip().lower()
         is_valid = "true" in answer
         print(f"  Verifying ('{span}', '{entity_type}') -> {is_valid}")

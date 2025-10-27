@@ -172,14 +172,30 @@ def main(args):
         sample_result = {"text": text, "ground_truth": ground_truth}
 
         # --- Run EL4NER ---
-        model_ids = {"phi": "microsoft/Phi-3-mini-4k-instruct", "glm": "THUDM/glm-4-9b-chat",
-                     "qwen": "Qwen/Qwen2-7B-Instruct"}
+        model_ids = {
+            "phi": "microsoft/Phi-3-mini-4k-instruct",
+            "glm": "THUDM/glm-4-9b-chat",
+            "qwen": "Qwen/Qwen2-7B-Instruct"
+        }
+
         backbone_models = {}
         for name, model_id in model_ids.items():
-            tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
-            model = AutoModelForCausalLM.from_pretrained(model_id, device_map="auto",
-                                                         quantization_config=quantization_config,
-                                                         trust_remote_code=True)
+            # Only trust remote code for GLM and Qwen
+            trust_code = True if name in ["glm", "qwen"] else False
+
+            # Tokenizer should match the trust_code setting
+            tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=trust_code)
+
+            # Model load with offload if needed
+            model = AutoModelForCausalLM.from_pretrained(
+                model_id,
+                device_map="auto",
+                quantization_config=quantization_config,
+                trust_remote_code=trust_code,
+                offload_folder="offload",  # folder for offloaded weights
+                offload_buffers=True  # allows large model to fit memory
+            )
+
             backbone_models[name] = (model, tokenizer)
 
         el4ner_preds = run_el4ner_pipeline(text, source_pool, backbone_models, similarity_model, k=5, verifier='glm')
@@ -192,22 +208,22 @@ def main(args):
         baseline_demos = retrieve_simple_demos(text, source_pool, similarity_model, k=5)
 
         # --- Run Llama 3.3 70B ---
-        llama_id = "meta-llama/Llama-3.3-70B-Instruct"
-        llama_tokenizer = AutoTokenizer.from_pretrained(llama_id)
-        llama_model = AutoModelForCausalLM.from_pretrained(llama_id, device_map="auto",
-                                                           quantization_config=quantization_config)
-        llama_preds = run_retrieval_augmented_llm_ner(text, baseline_demos, llama_model, llama_tokenizer)
-        _, llama_tags = convert_to_iob2(text, llama_preds)
-        all_preds_iob["Powerful LLM (Llama-3.3-70B)"].append(llama_tags)
-        sample_result["llama_prediction"] = llama_preds
-        clear_memory(llama_model, llama_tokenizer)
+        # llama_id = "meta-llama/Llama-3.3-70B-Instruct"
+        # llama_tokenizer = AutoTokenizer.from_pretrained(llama_id)
+        # llama_model = AutoModelForCausalLM.from_pretrained(llama_id, device_map="auto",
+        #                                                    quantization_config=quantization_config)
+        # llama_preds = run_retrieval_augmented_llm_ner(text, baseline_demos, llama_model, llama_tokenizer)
+        # _, llama_tags = convert_to_iob2(text, llama_preds)
+        # all_preds_iob["Powerful LLM (Llama-3.3-70B)"].append(llama_tags)
+        # sample_result["llama_prediction"] = llama_preds
+        # clear_memory(llama_model, llama_tokenizer)
 
         # --- Run Phi-3 ---
         phi_id = "microsoft/Phi-3-mini-4k-instruct"
         phi_tokenizer = AutoTokenizer.from_pretrained(phi_id)
         phi_model = AutoModelForCausalLM.from_pretrained(phi_id, device_map="auto",
                                                          quantization_config=quantization_config,
-                                                         trust_remote_code=True)
+                                                         trust_remote_code=False)
         phi_preds = run_retrieval_augmented_llm_ner(text, baseline_demos, phi_model, phi_tokenizer)
         _, phi_tags = convert_to_iob2(text, phi_preds)
         all_preds_iob["Single Small LLM (Phi-3)"].append(phi_tags)

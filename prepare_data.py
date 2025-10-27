@@ -10,7 +10,7 @@ def create_source_pool_from_wnut17():
     print("Loading WNUT17 dataset from Hugging Face...")
 
     # Load the train split directly to bypass the old dataset script
-    train_data = load_dataset("wnut_17", split="train")
+    train_data = load_dataset("wnut_17", split="train", trust_remote_code=True)
 
     # NER tags mapping from IDs to labels
     ner_tags = train_data.features['ner_tags'].feature.names
