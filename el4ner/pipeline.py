@@ -20,8 +20,16 @@ def _run_llm_inference(prompt, model, tokenizer, max_new_tokens=100):
     A helper function to run inference on a given model.
     Assumes the model and tokenizer have been correctly configured beforehand.
     """
+    # Tokenize the prompt to get both input_ids and attention_mask
     inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
-    outputs = model.generate(**inputs, max_new_tokens=max_new_tokens, pad_token_id=tokenizer.pad_token_id)
+
+    # CRITICAL FIX: Create a new dictionary containing ONLY the input_ids.
+    # This allows the GLM-4 model's custom code to generate its own attention mask,
+    # which avoids the bug with past_key_values.
+    inference_inputs = {"input_ids": inputs["input_ids"]}
+
+    # Pass the filtered inputs to the generate function
+    outputs = model.generate(**inference_inputs, max_new_tokens=max_new_tokens, pad_token_id=tokenizer.pad_token_id)
     response = tokenizer.decode(outputs[0], skip_special_tokens=True)
     return response
 
