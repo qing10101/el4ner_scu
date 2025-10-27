@@ -57,10 +57,10 @@ def clear_memory(*args):
 def load_and_prepare_dataset(split='train'):
     """
     Loads a specific split of the WNUT17 dataset and formats it.
-    This function is now reusable for both the training and test sets.
+    Includes trust_remote_code=True to align with best practices.
     """
     print(f"Loading WNUT17 '{split}' split...")
-    dataset = load_dataset("wnut_17", split=split)
+    dataset = load_dataset("wnut_17", split=split, trust_remote_code=True)
     ner_tags = dataset.features['ner_tags'].feature.names
 
     formatted_data = []
