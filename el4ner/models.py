@@ -1,27 +1,15 @@
-# el4ner/models.py (Corrected Version)
+# el4ner/models.py (Refactored with selective trust_remote_code)
 
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from sentence_transformers import SentenceTransformer
-
-
-def _configure_model_and_tokenizer(model, tokenizer):
-    """
-    A robust function to correctly configure special tokens for any model.
-    This is the key fix for the GLM-4 slowdown.
-    """
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
-
-    # Also configure the model's internal config
-    model.config.pad_token_id = tokenizer.pad_token_id
-
-    return model, tokenizer
+from utils import MODELS_REQUIRING_REMOTE_CODE, configure_model_and_tokenizer
 
 
 def load_el4ner_models():
     """
-    Loads ONLY the models required for the core EL4NER pipeline.
+    Loads ONLY the models required for the core EL4NER pipeline,
+    applying trust_remote_code selectively.
     """
     print("Loading models for the EL4NER pipeline...")
 
@@ -40,13 +28,17 @@ def load_el4ner_models():
 
     for name, model_id in model_ids.items():
         print(f"Loading {name}...")
-        tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
+        should_trust = model_id in MODELS_REQUIRING_REMOTE_CODE
+
+        tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=should_trust)
         model = AutoModelForCausalLM.from_pretrained(
-            model_id, device_map="auto", quantization_config=quantization_config, trust_remote_code=True
+            model_id,
+            device_map="auto",
+            quantization_config=quantization_config,
+            trust_remote_code=should_trust
         )
 
-        # Apply the fix
-        model, tokenizer = _configure_model_and_tokenizer(model, tokenizer)
+        model, tokenizer = configure_model_and_tokenizer(model, tokenizer)
         backbone_models[name] = (model, tokenizer)
 
     print("Loading similarity model...")

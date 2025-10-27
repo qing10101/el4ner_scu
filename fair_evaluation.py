@@ -1,92 +1,22 @@
+# fair_evaluation.py (Final, Refactored Version)
 
 import json
 import random
 import argparse
 import torch
-import gc
 from tqdm import tqdm
-from datasets import load_dataset
 from seqeval.metrics import classification_report
 from seqeval.scheme import IOB2
+from transformers import BitsAndBytesConfig
 from sentence_transformers import SentenceTransformer, util
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 
-# --- Import and reuse components from our existing scripts ---
+# --- Import from our central toolbox ---
+from utils import (
+    load_model,
+    clear_memory,
+    load_and_prepare_dataset
+)
 from el4ner.pipeline import run_el4ner_pipeline
-
-
-# --- Helper Functions ---
-
-# ADD THIS HELPER FUNCTION AT THE TOP LEVEL
-def _configure_model_and_tokenizer(model, tokenizer):
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
-    model.config.pad_token_id = tokenizer.pad_token_id
-    return model, tokenizer
-
-def clear_memory(*args):
-    """Clears models and CUDA cache from memory."""
-    for model in args:
-        if isinstance(model, dict):
-            for m in model.values(): del m
-        else:
-            del model
-    gc.collect()
-    torch.cuda.empty_cache()
-
-
-def convert_to_iob2(text, entities):
-    """Converts a text and a dictionary of entities to IOB2 format."""
-    # A simple whitespace tokenizer; for production, a more robust tokenizer would be better.
-    tokens = text.split()
-    tags = ['O'] * len(tokens)
-
-    if not entities or 'error' in entities:
-        return tokens, tags
-
-    for entity_text, entity_type in entities.items():
-        entity_tokens = entity_text.split()
-        for i in range(len(tokens) - len(entity_tokens) + 1):
-            if tokens[i:i + len(entity_tokens)] == entity_tokens:
-                tags[i] = f'B-{entity_type}'
-                for j in range(1, len(entity_tokens)):
-                    tags[i + j] = f'I-{entity_type}'
-                break
-    return tokens, tags
-
-
-def load_and_prepare_test_set():
-    """Loads the WNUT17 test set and formats it for our evaluation."""
-    # (This function is the same as before)
-    print("Loading WNUT17 test set...")
-    dataset = load_dataset("wnut_17", split="test")
-    ner_tags = dataset.features['ner_tags'].feature.names
-
-    formatted_data = []
-    for entry in dataset:
-        tokens = entry['tokens']
-        tags = [ner_tags[tag_id] for tag_id in entry['ner_tags']]
-        text = " ".join(tokens)
-
-        entities = {}
-        current_tokens = []
-        current_tag = None
-        for token, tag in zip(tokens, tags):
-            if tag.startswith('B-'):
-                if current_tokens: entities[" ".join(current_tokens)] = current_tag
-                current_tokens = [token]
-                current_tag = tag[2:]
-            elif tag.startswith('I-') and current_tag == tag[2:]:
-                current_tokens.append(token)
-            else:
-                if current_tokens: entities[" ".join(current_tokens)] = current_tag
-                current_tokens, current_tag = [], None
-        if current_tokens: entities[" ".join(current_tokens)] = current_tag
-
-        if entities:
-            formatted_data.append({"text": text, "entities": entities})
-
-    return formatted_data
 
 
 # --- Fair Baseline Implementation ---
@@ -97,7 +27,10 @@ def retrieve_simple_demos(text, source_pool, similarity_model, k=5):
     Finds the top-k most semantically similar sentences from the source pool.
     """
     text_embedding = similarity_model.encode(text, convert_to_tensor=True)
-    pool_embeddings = similarity_model.encode([item['text'] for item in source_pool], convert_to_tensor=True)
+    # Pre-computing all pool embeddings would be faster for large-scale runs,
+    # but this is fine for sample-based evaluation.
+    pool_embeddings = similarity_model.encode([item['text'] for item in source_pool], convert_to_tensor=True,
+                                              show_progress_bar=False)
 
     cos_scores = util.pytorch_cos_sim(text_embedding, pool_embeddings)[0]
     top_results = torch.topk(cos_scores, k=min(k, len(source_pool)))
@@ -121,7 +54,6 @@ def run_retrieval_augmented_llm_ner(text, demos, model, tokenizer):
     prompt = f"""You are an expert at Named Entity Recognition. Your task is to extract entities from the given text.
 The valid entity types are: person, location, organization, product, creative-work, corporation, group.
 Respond ONLY with a valid JSON object where keys are the extracted entities and values are their types.
-The allowed Named Entity categories are Person, Location, Group, Creative work, Corporation, Product.
 
 --- EXAMPLES ---
 {demo_prompt}--- END EXAMPLES ---
@@ -130,8 +62,6 @@ Text: "{text}"
 JSON:"""
 
     inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
-    if tokenizer.pad_token_id is None: tokenizer.pad_token_id = tokenizer.eos_token_id
-
     outputs = model.generate(**inputs, max_new_tokens=200, pad_token_id=tokenizer.pad_token_id)
     response = tokenizer.decode(outputs[0], skip_special_tokens=True)
 
@@ -143,12 +73,29 @@ JSON:"""
         return {"error": "Failed to parse JSON response."}
 
 
+def convert_to_iob2(text, entities):
+    """Converts a text and a dictionary of entities to IOB2 format."""
+    tokens = text.split()
+    tags = ['O'] * len(tokens)
+    if not entities or 'error' in entities:
+        return tokens, tags
+    for entity_text, entity_type in entities.items():
+        entity_tokens = entity_text.split()
+        for i in range(len(tokens) - len(entity_tokens) + 1):
+            if tokens[i:i + len(entity_tokens)] == entity_tokens:
+                tags[i] = f'B-{entity_type}'
+                for j in range(1, len(entity_tokens)):
+                    tags[i + j] = f'I-{entity_type}'
+                break
+    return tokens, tags
+
+
 # --- Main Evaluation Function ---
 
 def main(args):
     print("Starting FAIR Quantitative NER Performance Evaluation...")
 
-    test_data = load_and_prepare_test_set()
+    test_data = load_and_prepare_dataset(split='test')
     if args.num_samples >= len(test_data):
         print(
             f"Warning: Number of samples ({args.num_samples}) is >= test set size ({len(test_data)}). Using the entire test set.")
@@ -162,49 +109,25 @@ def main(args):
                                        "Single Small LLM (Phi-3)": []}
     detailed_results = []
 
-    quantization_config = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4",bnb_4bit_compute_dtype=torch.bfloat16)
+    quantization_config = BitsAndBytesConfig(
+        load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.bfloat16
+    )
 
-    # Load the source pool once for all models
     with open('data/wnut17_source_pool.json', 'r') as f:
         source_pool = json.load(f)
-
-    # Load the similarity model once for all models
     similarity_model = SentenceTransformer('all-MiniLM-L6-v2', device='cuda')
 
     for item in tqdm(sampled_data, desc="Evaluating Samples"):
         text, ground_truth = item['text'], item['entities']
         _, true_tags = convert_to_iob2(text, ground_truth)
         all_true_iob.append(true_tags)
-
         sample_result = {"text": text, "ground_truth": ground_truth}
 
         # --- Run EL4NER ---
-        model_ids = {
-            "phi": "microsoft/Phi-3-mini-4k-instruct",
-            "glm": "THUDM/glm-4-9b-chat",
-            "qwen": "Qwen/Qwen2-7B-Instruct"
-        }
-
         backbone_models = {}
-        for name, model_id in model_ids.items():
-            # Only trust remote code for GLM and Qwen
-            trust_code = True if name in ["glm", "qwen"] else False
-
-            # Tokenizer should match the trust_code setting
-            tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=trust_code)
-
-            # Model load with offload if needed
-            model = AutoModelForCausalLM.from_pretrained(
-                model_id,
-                device_map="auto",
-                quantization_config=quantization_config,
-                trust_remote_code=trust_code,
-                offload_folder="offload",  # folder for offloaded weights
-                offload_buffers=True  # allows large model to fit memory
-            )
-            model, tokenizer = _configure_model_and_tokenizer(model, tokenizer)
-            backbone_models[name] = (model, tokenizer)
-
+        for name, model_id in {"phi": "microsoft/Phi-3-mini-4k-instruct", "glm": "THUDM/glm-4-9b-chat",
+                               "qwen": "Qwen/Qwen2-7B-Instruct"}.items():
+            backbone_models[name] = load_model(model_id, quantization_config)
         el4ner_preds = run_el4ner_pipeline(text, source_pool, backbone_models, similarity_model, k=5, verifier='glm')
         _, el4ner_tags = convert_to_iob2(text, el4ner_preds)
         all_preds_iob["EL4NER (Ensemble)"].append(el4ner_tags)
@@ -215,11 +138,7 @@ def main(args):
         baseline_demos = retrieve_simple_demos(text, source_pool, similarity_model, k=5)
 
         # --- Run Llama 3.3 70B ---
-        llama_id = "meta-llama/Llama-3.3-70B-Instruct"
-        llama_tokenizer = AutoTokenizer.from_pretrained(llama_id)
-        llama_model = AutoModelForCausalLM.from_pretrained(llama_id, device_map="auto",
-                                                           quantization_config=quantization_config)
-        llama_model, llama_tokenizer = _configure_model_and_tokenizer(llama_model, llama_tokenizer)
+        llama_model, llama_tokenizer = load_model("meta-llama/Llama-3.3-70B-Instruct", quantization_config)
         llama_preds = run_retrieval_augmented_llm_ner(text, baseline_demos, llama_model, llama_tokenizer)
         _, llama_tags = convert_to_iob2(text, llama_preds)
         all_preds_iob["Powerful LLM (Llama-3.3-70B)"].append(llama_tags)
@@ -227,12 +146,7 @@ def main(args):
         clear_memory(llama_model, llama_tokenizer)
 
         # --- Run Phi-3 ---
-        phi_id = "microsoft/Phi-3-mini-4k-instruct"
-        phi_tokenizer = AutoTokenizer.from_pretrained(phi_id)
-        phi_model = AutoModelForCausalLM.from_pretrained(phi_id, device_map="auto",
-                                                         quantization_config=quantization_config,
-                                                         trust_remote_code=False)
-        phi_model, phi_tokenizer = _configure_model_and_tokenizer(phi_model, phi_tokenizer)
+        phi_model, phi_tokenizer = load_model("microsoft/Phi-3-mini-4k-instruct", quantization_config)
         phi_preds = run_retrieval_augmented_llm_ner(text, baseline_demos, phi_model, phi_tokenizer)
         _, phi_tags = convert_to_iob2(text, phi_preds)
         all_preds_iob["Single Small LLM (Phi-3)"].append(phi_tags)
