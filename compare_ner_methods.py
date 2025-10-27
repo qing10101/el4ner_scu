@@ -49,11 +49,11 @@ def main():
     for text in sample_texts:
         results = {}
 
-        # --- Run Llama 3.3 70B ---
-        print(f"\n--- Loading Llama 3.3 70B for: \"{text[:50]}...\" ---")
-        llama_model, llama_tokenizer = load_model("meta-llama/Llama-3.3-70B-Instruct", quantization_config)
-        results['Powerful LLM (Llama-3.3-70B)'] = run_single_llm_ner(text, llama_model, llama_tokenizer)
-        clear_memory(llama_model, llama_tokenizer)
+        # --- Run Qwen3-30B ---
+        print(f"\n--- Loading Qwen3-30B for: \"{text[:50]}...\" ---")
+        qwen3_model, qwen3_tokenizer = load_model("Qwen/Qwen3-30B-A3B-Instruct-2507", quantization_config)
+        results['Powerful LLM (Qwen3-30B)'] = run_single_llm_ner(text, qwen3_model, qwen3_tokenizer)
+        clear_memory(qwen3_model, qwen3_tokenizer)
 
         # --- Run Phi-3 ---
         print(f"\n--- Loading Phi-3 for: \"{text[:50]}...\" ---")

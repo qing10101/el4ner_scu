@@ -6,7 +6,7 @@
 
 This repository provides a faithful, step-by-step implementation and quantitative evaluation of the research paper **"EL4NER: Ensemble Learning for Named Entity Recognition via Multiple Small-Parameter Large Language Models"**.
 
-This project not only replicates the core EL4NER pipeline but also includes a rigorous, fair comparison against a state-of-the-art standalone LLM (Llama 3.3 70B), all designed to run on high-VRAM GPUs like the NVIDIA RTX A6000.
+This project not only replicates the core EL4NER pipeline but also includes a rigorous, fair comparison against a state-of-the-art standalone LLM, all designed to run on high-VRAM GPUs like the NVIDIA RTX A6000.
 
 ## ✨ Key Features
 
@@ -101,9 +101,8 @@ Follow these steps in order to set up and run the project.
 
 ### Step 0: Prerequisites
 
-- **Hardware:** A high-end NVIDIA GPU with **at least 48 GB of VRAM** (e.g., RTX A6000, A100) is **required** to run the full evaluation with Llama 3.3 70B.
+- **Hardware:** A high-end NVIDIA GPU with **at least 24 GB of VRAM** (e.g., RTX 3090, RTX 4090, RTX A5000) is **required** to run the full evaluation with Qwen3-30B.
 - **Software:** Python 3.9+ and Git.
-- **Access:** A [Hugging Face](https://huggingface.co/) account with granted access to the [Llama 3.3 70B model](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct).
 - **Permissions:** **No root or `sudo` access is required** for any part of this process. The entire project runs in a standard user environment.
 
 ### Step 1: Clone the Repository
@@ -133,18 +132,7 @@ pip install -r requirements.txt
 ```
 
 
-## Step 4: Authenticate with Hugging Face
-
-This step securely logs you into Hugging Face, allowing the scripts to download the gated Llama 3.3 model.
-Create a Hugging Face access token with read permissions on their website.
-Run the following command in your terminal and paste your token when prompted.
-
-```bash
-hf auth login
-```
-
-
-### Step 5: Prepare the Dataset
+### Step 4: Prepare the Dataset
 
 This implementation is pre-configured to use the **WNUT17** dataset from Hugging Face. Run the provided script to automatically download, process, and format the data into a source pool file required by the pipeline.
 
@@ -162,7 +150,8 @@ All commands should be run from the project's root directory (el4ner_scu/).
 
 ### Option 1: Quantitative Evaluation (Recommended Final Goal)
 
-This is the main script. It runs a fair, data-driven comparison and calculates Precision, Recall, and F1-scores.
+This is the main script. It runs a fair, data-driven comparison against **Qwen3-30B** and calculates Precision, Recall, and F1-scores.
+
 **How to Run:**
 
 ```bash
@@ -176,7 +165,8 @@ The results will be printed to the console and a detailed JSON file will be save
 
 ### Option 2: Qualitative Side-by-Side Comparison
 
-This script is useful for quick demos on a few specific sentences, printing a clean comparison table.
+This script is useful for quick demos on a few specific sentences, printing a clean comparison table against **Qwen3-30B**.
+
 **How to Run:**
 
 ```bash
@@ -185,7 +175,8 @@ python compare_ner_methods.py
 
 ### Option 3: Running the Core EL4NER Pipeline
 
-If you only want to test the EL4NER pipeline itself without the long overhead of loading Llama 3.3, use this command.
+If you only want to test the EL4NER pipeline itself, use this command.
+
 **How to Run:**
 
 ```bash

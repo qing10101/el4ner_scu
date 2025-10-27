@@ -8,10 +8,11 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 
 # --- Centralized Model and Memory Management ---
 
+
 # A set of model IDs that are known to require custom remote code.
-# This makes our loading function much safer and more precise.
 MODELS_REQUIRING_REMOTE_CODE = {
-    "THUDM/glm-4-9b-chat"
+    "THUDM/glm-4-9b-chat",
+    "Qwen/Qwen3-30B-A3B-Instruct-2507" # <-- Add this line
 }
 
 

@@ -105,8 +105,9 @@ def main(args):
     sampled_data = random.sample(test_data, args.num_samples)
     print(f"Randomly sampled {len(sampled_data)} examples from the WNUT17 test set.")
 
-    all_true_iob, all_preds_iob = [], {"EL4NER (Ensemble)": [], "Powerful LLM (Llama-3.3-70B)": [],
+    all_true_iob, all_preds_iob = [], {"EL4NER (Ensemble)": [], "Powerful LLM (Qwen3-30B)": [],
                                        "Single Small LLM (Phi-3)": []}
+
     detailed_results = []
 
     quantization_config = BitsAndBytesConfig(
@@ -137,13 +138,14 @@ def main(args):
         # --- Prepare Demos for Baselines ---
         baseline_demos = retrieve_simple_demos(text, source_pool, similarity_model, k=5)
 
-        # --- Run Llama 3.3 70B ---
-        llama_model, llama_tokenizer = load_model("meta-llama/Llama-3.3-70B-Instruct", quantization_config)
-        llama_preds = run_retrieval_augmented_llm_ner(text, baseline_demos, llama_model, llama_tokenizer)
-        _, llama_tags = convert_to_iob2(text, llama_preds)
-        all_preds_iob["Powerful LLM (Llama-3.3-70B)"].append(llama_tags)
-        sample_result["llama_prediction"] = llama_preds
-        clear_memory(llama_model, llama_tokenizer)
+        # --- Run Qwen3-30B ---
+        qwen3_model, qwen3_tokenizer = load_model("Qwen/Qwen3-30B-A3B-Instruct-2507", quantization_config)
+        qwen3_preds = run_retrieval_augmented_llm_ner(text, baseline_demos, qwen3_model, qwen3_tokenizer)
+        _, qwen3_tags = convert_to_iob2(text, qwen3_preds)
+        # Be sure to update the dictionary key for the final report
+        all_preds_iob["Powerful LLM (Qwen3-30B)"].append(qwen3_tags)
+        sample_result["qwen3_prediction"] = qwen3_preds
+        clear_memory(qwen3_model, qwen3_tokenizer)
 
         # --- Run Phi-3 ---
         phi_model, phi_tokenizer = load_model("microsoft/Phi-3-mini-4k-instruct", quantization_config)
