@@ -52,5 +52,6 @@ def main():
     print(f"Named Entities Found: {final_entities}")
     print("-----------------------------\n")
 
+
 if __name__ == "__main__":
     main()
