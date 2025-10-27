@@ -17,6 +17,13 @@ from el4ner.pipeline import run_el4ner_pipeline
 
 # --- Helper Functions ---
 
+# ADD THIS HELPER FUNCTION AT THE TOP LEVEL
+def _configure_model_and_tokenizer(model, tokenizer):
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+    model.config.pad_token_id = tokenizer.pad_token_id
+    return model, tokenizer
+
 def clear_memory(*args):
     """Clears models and CUDA cache from memory."""
     for model in args:
@@ -195,7 +202,7 @@ def main(args):
                 offload_folder="offload",  # folder for offloaded weights
                 offload_buffers=True  # allows large model to fit memory
             )
-
+            model, tokenizer = _configure_model_and_tokenizer(model, tokenizer)
             backbone_models[name] = (model, tokenizer)
 
         el4ner_preds = run_el4ner_pipeline(text, source_pool, backbone_models, similarity_model, k=5, verifier='glm')
@@ -212,6 +219,7 @@ def main(args):
         llama_tokenizer = AutoTokenizer.from_pretrained(llama_id)
         llama_model = AutoModelForCausalLM.from_pretrained(llama_id, device_map="auto",
                                                            quantization_config=quantization_config)
+        llama_model, llama_tokenizer = _configure_model_and_tokenizer(llama_model, llama_tokenizer)
         llama_preds = run_retrieval_augmented_llm_ner(text, baseline_demos, llama_model, llama_tokenizer)
         _, llama_tags = convert_to_iob2(text, llama_preds)
         all_preds_iob["Powerful LLM (Llama-3.3-70B)"].append(llama_tags)
@@ -224,6 +232,7 @@ def main(args):
         phi_model = AutoModelForCausalLM.from_pretrained(phi_id, device_map="auto",
                                                          quantization_config=quantization_config,
                                                          trust_remote_code=False)
+        phi_model, phi_tokenizer = _configure_model_and_tokenizer(phi_model, phi_tokenizer)
         phi_preds = run_retrieval_augmented_llm_ner(text, baseline_demos, phi_model, phi_tokenizer)
         _, phi_tags = convert_to_iob2(text, phi_preds)
         all_preds_iob["Single Small LLM (Phi-3)"].append(phi_tags)

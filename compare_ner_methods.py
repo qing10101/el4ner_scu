@@ -30,6 +30,15 @@ Text: "{text}"
 JSON:"""
 
 
+# ADD THIS HELPER FUNCTION AT THE TOP LEVEL
+def _configure_model_and_tokenizer(model, tokenizer):
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+    model.config.pad_token_id = tokenizer.pad_token_id
+    return model, tokenizer
+
+
+
 def run_single_llm_ner(text, model, tokenizer):
     """Runs a simple few-shot NER task on any given model."""
     prompt = SINGLE_LLM_FEW_SHOT_PROMPT.format(text=text)
@@ -104,10 +113,14 @@ def main():
             "qwen": "Qwen/Qwen2-7B-Instruct"
         }
         for name, model_id in model_ids.items():
-            tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
+            # Only trust remote code for GLM and Qwen
+            trust_code = True if name in ["glm", "qwen"] else False
+            tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=trust_code)
             model = AutoModelForCausalLM.from_pretrained(model_id, device_map="auto",
                                                          quantization_config=quantization_config,
-                                                         trust_remote_code=True)
+                                                         trust_remote_code=trust_code)
+            # APPLY THE FIX HERE
+            model, tokenizer = _configure_model_and_tokenizer(model, tokenizer)
             backbone_models[name] = (model, tokenizer)
 
         similarity_model = SentenceTransformer('all-MiniLM-L6-v2', device='cuda')
@@ -128,6 +141,8 @@ def main():
         llama_tokenizer = AutoTokenizer.from_pretrained(llama_id)
         llama_model = AutoModelForCausalLM.from_pretrained(llama_id, device_map="auto",
                                                            quantization_config=quantization_config)
+        # APPLY THE FIX HERE
+        llama_model, llama_tokenizer = _configure_model_and_tokenizer(llama_model, llama_tokenizer)
 
         print("Running Llama 3.3 70B...")
         results['Powerful LLM (Llama-3.3-70B)'] = run_single_llm_ner(text, llama_model, llama_tokenizer)
@@ -141,7 +156,9 @@ def main():
         phi_tokenizer = AutoTokenizer.from_pretrained(phi_id)
         phi_model = AutoModelForCausalLM.from_pretrained(phi_id, device_map="auto",
                                                          quantization_config=quantization_config,
-                                                         trust_remote_code=True)
+                                                         trust_remote_code=False)
+        # APPLY THE FIX HERE
+        phi_model, phi_tokenizer = _configure_model_and_tokenizer(phi_model, phi_tokenizer)
 
         print("Running Phi-3...")
         results['Single Small LLM (Phi-3)'] = run_single_llm_ner(text, phi_model, phi_tokenizer)
