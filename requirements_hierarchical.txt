@@ -1,0 +1,26 @@
+# Requirements for Hierarchical NER System
+# Install with: pip install -r requirements_hierarchical.txt
+
+# Core dependencies
+torch>=2.0.0
+transformers>=4.30.0
+numpy>=1.24.0
+scipy>=1.10.0
+
+# For visualization and comparison
+tabulate>=0.9.0
+tqdm>=4.65.0
+
+# Optional: For better performance
+sentencepiece>=0.1.99
+accelerate>=0.20.0
+
+# Optional: For GPU optimization
+# Uncomment if you have CUDA available
+# bitsandbytes>=0.41.0
+
+# Development dependencies (optional)
+# pytest>=7.4.0
+# black>=23.0.0
+# flake8>=6.0.0
+
