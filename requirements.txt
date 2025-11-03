@@ -1,10 +1,21 @@
+# requirements.txt
+
+# Core ML and Transformer libraries
 transformers
-datasets~=3.6.0
 torch
 accelerate
 bitsandbytes
 sentence-transformers
+
+# Data handling and version pinning for compatibility
+datasets==2.16.1
+
+# Utilities
 nltk
 tqdm
+
+# Evaluation
 seqeval
+
+# Performance Optimization (Fast Tokenizer)
 tiktoken

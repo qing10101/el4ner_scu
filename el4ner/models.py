@@ -1,15 +1,15 @@
-# el4ner/models.py
-# This is the simplified, final version for the core EL4NER pipeline.
+# el4ner/models.py (Final, Stable Version)
 
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from sentence_transformers import SentenceTransformer
+# We can now import this directly from utils again for consistency
+from utils import configure_model_and_tokenizer
+
 
 def load_el4ner_models():
     """
-    Loads ONLY the models required for the core EL4NER pipeline:
-    - The three backbone sLLMs (Phi-3, GLM-4, Qwen2).
-    - The Sentence Transformer for semantic similarity.
+    Loads the models for the core EL4NER pipeline using standard, non-gated models.
     """
     print("Loading models for the EL4NER pipeline...")
 
@@ -19,35 +19,25 @@ def load_el4ner_models():
         bnb_4bit_compute_dtype=torch.bfloat16
     )
 
-    # --- Load Backbone Models ---
-    print("Loading Phi-3...")
-    model_id_phi = "microsoft/Phi-3-mini-4k-instruct"
-    tokenizer_phi = AutoTokenizer.from_pretrained(model_id_phi)
-    model_phi = AutoModelForCausalLM.from_pretrained(
-        model_id_phi, device_map="auto", quantization_config=quantization_config, trust_remote_code=True
-    )
-
-    print("Loading GLM-4...")
-    model_id_glm = "THUDM/glm-4-9b-chat"
-    tokenizer_glm = AutoTokenizer.from_pretrained(model_id_glm, trust_remote_code=True)
-    model_glm = AutoModelForCausalLM.from_pretrained(
-        model_id_glm, device_map="auto", quantization_config=quantization_config, trust_remote_code=True
-    )
-
-    print("Loading Qwen2...")
-    model_id_qwen = "Qwen/Qwen2-7B-Instruct"
-    tokenizer_qwen = AutoTokenizer.from_pretrained(model_id_qwen)
-    model_qwen = AutoModelForCausalLM.from_pretrained(
-        model_id_qwen, device_map="auto", quantization_config=quantization_config
-    )
-
-    backbone_models = {
-        "phi": (model_phi, tokenizer_phi),
-        "glm": (model_glm, tokenizer_glm),
-        "qwen": (model_qwen, tokenizer_qwen)
+    backbone_models = {}
+    model_ids = {
+        "phi": "microsoft/Phi-3-mini-4k-instruct",
+        "mistral": "mistralai/Mistral-7B-Instruct-v0.2",  # <-- REPLACED GLM/Llama3
+        "qwen": "Qwen/Qwen2-7B-Instruct"
     }
 
-    # --- Load Sentence Transformer for Similarity ---
+    for name, model_id in model_ids.items():
+        print(f"Loading {name}...")
+        # All models are now standard and do not need trust_remote_code=True
+        tokenizer = AutoTokenizer.from_pretrained(model_id)
+        model = AutoModelForCausalLM.from_pretrained(
+            model_id,
+            device_map="auto",
+            quantization_config=quantization_config
+        )
+        model, tokenizer = configure_model_and_tokenizer(model, tokenizer)
+        backbone_models[name] = (model, tokenizer)
+
     print("Loading similarity model...")
     similarity_model = SentenceTransformer('all-MiniLM-L6-v2', device='cuda')
 
